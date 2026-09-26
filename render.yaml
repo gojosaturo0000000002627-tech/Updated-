@@ -23,7 +23,7 @@ services:
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12.6"
+        value: "3.13.7"
       - key: BOT_TOKEN          # from @BotFather
         sync: false
       - key: CHANNEL_ID         # e.g. @my_anime_channel or -1001234567890
@@ -47,7 +47,7 @@ services:
 #    startCommand: python send_once.py morning
 #    envVars:
 #      - key: PYTHON_VERSION
-#        value: "3.12.6"
+#        value: "3.13.7"
 #      - key: BOT_TOKEN
 #        sync: false
 #      - key: CHANNEL_ID
@@ -61,7 +61,7 @@ services:
 #    startCommand: python send_once.py evening
 #    envVars:
 #      - key: PYTHON_VERSION
-#        value: "3.12.6"
+#        value: "3.13.7"
 #      - key: BOT_TOKEN
 #        sync: false
 #      - key: CHANNEL_ID

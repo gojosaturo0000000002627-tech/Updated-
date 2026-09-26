@@ -22,6 +22,7 @@ Run locally:   python main.py
 Run on Render: Web Service, start command `python main.py`
 """
 
+import asyncio
 import logging
 import threading
 from datetime import datetime, time as dtime
@@ -345,6 +346,14 @@ def main() -> None:
         raise SystemExit(1)
 
     start_health_server()
+
+    # Python 3.14+ me asyncio.get_event_loop() khud naya loop nahi banata —
+    # PTB 21 usi par bharosa karta hai (RuntimeError: no current event loop).
+    # Hum khud loop bana ke set kar dete hain, to har Python version par chalta hai.
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     app = build_application()
     log.info("starting polling (health server on :%s)...", PORT)
