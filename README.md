@@ -33,18 +33,27 @@ Deploy it **free** on [Render.com](https://render.com).
 2. Choose a display name (e.g. `Fairy World Updates`) and a username (must end in `bot`)
 3. BotFather replies with a token like `123456789:AAH...` → **copy it** (this is `BOT_TOKEN`)
 
-## 🪜 Step 2 — Add the bot to your channel as ADMIN (mandatory)
+## 🪜 Step 2 — Channels/Groups ko jodna (EASY — koi ID ki zaroorat nahi!)
 
-1. Open your channel → **Manage Channel → Administrators → Add Admin**
-2. Add your bot → enable at least **Post Messages** permission
-3. Without this the bot cannot post — you'll get a `Chat not found` / `not enough rights` error.
+Bot ab **multi-channel + multi-group** hai — koi bhi use jod sakta hai:
 
-## 🪜 Step 3 — Get your CHANNEL_ID
+**👥 GROUP me (admin ki zaroorat NAHI!):**
+1. Group kholo → **Add Members → bot ka username**
+2. Bas! Member hi kaafi hai — bot group me daily updates bhejega
 
-- **Public channel** (has @username): `CHANNEL_ID=@your_channel`
-- **Private channel**: post anything in the channel, then forward that message to
-  **@RawDataBot** (or `@userinfobot`) — it shows `"chat": {"id": -100xxxxxxxxxx}`.
-  Use that `-100...` number as `CHANNEL_ID`.
+**📺 CHANNEL me (Telegram rule — admin zaroori):**
+1. Channel → **Manage Channel → Administrators → Add Admin**
+2. Bot ko add karo → **Post Messages** permission ON rakho
+3. (Channels me Telegram kisi bhi bot ko sirf admin ban kar post karne deta hai — ye rule sab bots pe lagta hai)
+
+- Jahan bhi add hoga, wahan ✅ welcome post + daily updates (10:00 AM & 7:00 PM IST)
+- Bot ko chat se remove kiya → wahan ke updates apne aap band
+- `CHANNEL_ID` env var ki **zaroorat nahi** (purane setup ke liye abhi bhi kaam karta hai —
+  set karoge to woh channel bhi registry me add ho jata hai)
+
+> **Note:** agar bot deploy hone se PEHLE se kisi channel ka admin tha, to use woh channel
+> yaad nahi rehta (Telegram history nahi deta). Aise channel ke liye ya to `CHANNEL_ID` env
+> set karo, ya bot ko admin se remove karke dobara add kar do.
 
 ## 🪜 Step 4 — Put the code on GitHub
 
@@ -182,7 +191,9 @@ python send_once.py morning
 
 | Problem | Fix |
 |---|---|
-| `Chat not found` / bot silent | Bot is not an **admin** of the channel, or wrong `CHANNEL_ID` |
+| Channel me updates nahi aa rahe | Bot us channel ka **admin** hai? (`Post Messages` permission ON?) — nahi to admin se remove karke dobara add karo |
+| `Chat not found` / bot silent | Bot is not an **admin** of that channel — auto-remove ho gaya hoga, dobara admin banao |
+| Kitne channels jude hain? | Bot ke private chat me `/channels` likho |
 | No photo on the message | `assets/banner.jpg` missing — re-add it and redeploy |
 | 10 AM message late/missing | Free plan slept — set up the keep-awake pinger (§ Step 5) |
 | Muse India source ❌ in `/test` | YouTube RSS occasionally blocked from some datacenter IPs; other sources still cover it, and your `schedule_config.py` entries always go out |

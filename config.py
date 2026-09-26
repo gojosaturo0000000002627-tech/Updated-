@@ -94,6 +94,6 @@ def check_required_settings() -> list[str]:
     problems = []
     if not BOT_TOKEN:
         problems.append("BOT_TOKEN is not set. Get it from @BotFather on Telegram.")
-    if not CHANNEL_ID:
-        problems.append("CHANNEL_ID is not set. Example: @my_channel or -1001234567890")
+    # NOTE: CHANNEL_ID is NOT required anymore — bot ko kisi bhi channel ka
+    # admin bana kar add kar do, woh khud register ho jata hai.
     return problems

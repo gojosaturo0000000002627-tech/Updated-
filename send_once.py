@@ -20,7 +20,11 @@ async def run(mode: str) -> None:
     from sender import gather_and_send
     async with Bot(BOT_TOKEN) as bot:
         status = await gather_and_send(bot, evening=(mode == "evening"))
-        print(f"[send_once/{mode}] → {status} (channel: {CHANNEL_ID})")
+        if status == "no-channels":
+            print(f"[send_once/{mode}] → koi channel connected nahi "
+                  "(bot ko kisi channel ka admin banao)")
+        else:
+            print(f"[send_once/{mode}] → {status}")
 
 
 def main() -> None:
