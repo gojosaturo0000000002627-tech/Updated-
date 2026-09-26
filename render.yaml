@@ -1,0 +1,69 @@
+# =============================================================================
+# Render.com blueprint — Daily Anime Dub Update Bot
+#
+# OPTION A (active below):  Web Service (FREE plan) — runs 24/7 with polling,
+#           plus a tiny HTTP health endpoint so Render keeps it alive.
+#           NOTE: free web services sleep after 15 min without HTTP traffic,
+#           so ping the URL every 10 min with a free monitor (cron-job.org,
+#           UptimeRobot) — full steps in README.md § "Keep it awake (free)".
+#
+# OPTION B (commented at the bottom): two Cron Jobs (from ~$1/month each) —
+#           simpler & guaranteed on time, no keep-awake needed.
+# =============================================================================
+
+services:
+  - type: web
+    name: anime-dub-update-bot
+    runtime: python
+    plan: free
+    region: singapore            # closest region to India
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: BOT_TOKEN          # from @BotFather
+        sync: false
+      - key: CHANNEL_ID         # e.g. @my_anime_channel or -1001234567890
+        sync: false
+      - key: ADMIN_CHAT_ID      # your Telegram user id (optional but recommended)
+        sync: false
+      # - key: MUSE_CHANNEL_IDS      # optional extra channels, comma separated
+      #   value: UCYYhAzgWuxPauRXdPpLAX3Q
+      # - key: EVENING_CUTOFF_HOUR   # 7 PM message shows releases from 18:00+
+      #   value: "18"
+
+# -----------------------------------------------------------------------------
+# OPTION B — Cron Job alternative (uncomment BOTH blocks and delete the web
+# service above). Schedules are UTC: 04:00 UTC = 09:30 IST, 13:00 UTC = 18:30 IST.
+#
+#  - type: cron
+#    name: anime-update-morning
+#    runtime: python
+#    schedule: "0 4 * * *"
+#    buildCommand: pip install -r requirements.txt
+#    startCommand: python send_once.py morning
+#    envVars:
+#      - key: PYTHON_VERSION
+#        value: "3.12.6"
+#      - key: BOT_TOKEN
+#        sync: false
+#      - key: CHANNEL_ID
+#        sync: false
+#
+#  - type: cron
+#    name: anime-update-evening
+#    runtime: python
+#    schedule: "0 13 * * *"
+#    buildCommand: pip install -r requirements.txt
+#    startCommand: python send_once.py evening
+#    envVars:
+#      - key: PYTHON_VERSION
+#        value: "3.12.6"
+#      - key: BOT_TOKEN
+#        sync: false
+#      - key: CHANNEL_ID
+#        sync: false
+# -----------------------------------------------------------------------------
