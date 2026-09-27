@@ -107,7 +107,13 @@ def _slot_today(day_label: str, time_str: str, now: datetime) -> datetime | None
         t = datetime.strptime(time_str.strip(), "%I:%M %p").time()
     except ValueError:
         return None
-    return datetime.combine(now.date(), t, tzinfo=IST)
+    when = datetime.combine(now.date(), t, tzinfo=IST)
+    # Site ka buffer hatao — real drop time (Case 1 me show.release pehle se
+    # shifted hai; Case 2/3 slot time_str se banta hai, to yahan bhi shift karo).
+    from config import DUB_TIME_OFFSET_MINUTES
+    if DUB_TIME_OFFSET_MINUTES:
+        when += timedelta(minutes=DUB_TIME_OFFSET_MINUTES)
+    return when
 
 
 def resolve_today(show, now: datetime):
@@ -258,6 +264,12 @@ async def build_releases(now: datetime, evening: bool = False):
     airing_src = (report["animeschedule"] if report["animeschedule"].ok
                   and report["animeschedule"].items else report["livechart"])
 
+    # Backbone (schedule page) dead — site + proxy + cache teeno fail — to
+    # galat adhoora list (sirf Muse ke random uploads) bhejne ke bajaye honest
+    # fallback message jaata hai: "kuch sources check nahi ho paye".
+    if not dub_sched.ok:
+        return [], report
+
     entries: list[Release] = []
     aliases: list[tuple[str, str]] = []
 
@@ -335,8 +347,16 @@ async def build_releases(now: datetime, evening: bool = False):
                 continue
             r = find_match(v.show)
             if r is None:
+                # show-name parse fail hua ho to title se saaf naam nikalo
+                show_name = v.show
+                if not show_name:
+                    show_name = re.sub(
+                        r"\s*[-–|·]\s*(?:episode|eps?\.?)\s*\d+.*$", "",
+                        v.title, flags=re.I)
+                    show_name = re.sub(r"\s*\|\s*muse\s.*$", "", show_name, flags=re.I)
+                    show_name = show_name.strip(" -–|·\t")
                 r = Release(
-                    name=v.show or v.title, platform="Muse India (YouTube)",
+                    name=show_name or v.title, platform="Muse India (YouTube)",
                     season=v.season, episode=v.episode, episode_expected=False,
                     sources=["muse_rss"], confirmed=True,
                 )

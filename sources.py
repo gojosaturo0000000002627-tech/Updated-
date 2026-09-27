@@ -34,7 +34,21 @@ BROWSER_HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
     ),
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 # Indian dub languages we care about (everything else is ignored)
@@ -83,8 +97,10 @@ def parse_muse_title(title: str) -> tuple[str, int | None, int | None, list[str]
     # languages are detected on the FULL title (incl. a leading 【Tamil】 tag)
     langs = [l.capitalize() for l in DUB_LANGS if re.search(rf"\b{l}\b", t, re.I)]
 
-    # drop a leading 【...】 tag (usually the language label)
+    # drop a leading language tag — 【Hindi】, [Hindi], (Hindi Dub) — sab styles
     t = re.sub(r"^【[^】]{1,25}】\s*", "", t)
+    t = re.sub(r"^\[\s*(?:hindi|tamil|telugu)[^\]]{0,18}\]\s*", "", t, flags=re.I)
+    t = re.sub(r"^\(\s*(?:hindi|tamil|telugu)[^)]{0,18}\)\s*", "", t, flags=re.I)
 
     ep_match = (
         re.search(r"\b(?:episode|eps?\.?|ep)\s*[-:.]?\s*(\d{1,4})", t, re.I)
@@ -502,6 +518,11 @@ def _parse_schedule_cards(container, list_id: str) -> list[ScheduleShow]:
             release = datetime.fromisoformat(release_attr).astimezone(IST)
         except ValueError:
             continue  # no valid drop time (e.g. "Date Not Announced")
+        # The site lists a ~30-min buffer over the real drop time — shift to
+        # the actual platform release time (DUB_TIME_OFFSET_MINUTES, default -30).
+        from config import DUB_TIME_OFFSET_MINUTES
+        if DUB_TIME_OFFSET_MINUTES:
+            release += timedelta(minutes=DUB_TIME_OFFSET_MINUTES)
 
         items.append(
             ScheduleShow(
@@ -514,46 +535,68 @@ def _parse_schedule_cards(container, list_id: str) -> list[ScheduleShow]:
 
 async def fetch_dub_schedule(client: httpx.AsyncClient) -> SourceResult:
     result = SourceResult(name="Anime Dub Schedule (animedubhindi.link)")
-    # The site sits behind Cloudflare and intermittently returns 525 — retry.
+    # Cloudflare wali site: kabhi 525, datacenter IPs (Render) se 403 tak.
+    # 3-layer defence: (1) direct (2) allorigins proxy (3) aaj ki cached copy.
     last_error: Exception | None = None
-    resp = None
+    html_text: str | None = None
+    via = "live"
+
+    # ---- layer 1: direct fetch (3 tries) --------------------------------
     for attempt in range(3):
         try:
-            resp = await client.get(
-                DUB_SCHEDULE_URL,
-                headers={
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
-            )
+            resp = await client.get(DUB_SCHEDULE_URL, headers=BROWSER_HEADERS)
             if resp.status_code == 200 and len(resp.content) > 20000:
-                break  # full page received
+                html_text = resp.text
+                break
             last_error = ValueError(
-                f"attempt {attempt + 1}: HTTP {resp.status_code}, {len(resp.content)} bytes"
+                f"direct attempt {attempt + 1}: HTTP {resp.status_code}, {len(resp.content)} bytes"
             )
         except Exception as exc:  # noqa: BLE001
             last_error = exc
-        resp = None
         await asyncio.sleep(1.5)
 
+    # ---- layer 2: allorigins proxy (Render jaise blocked IPs ke liye) ----
+    if html_text is None:
+        proxy_url = ("https://api.allorigins.win/raw?url="
+                     "https%3A%2F%2Fwww.animedubhindi.link%2Fschedule.php")
+        for attempt in range(2):
+            try:
+                resp = await client.get(
+                    proxy_url,
+                    headers={"User-Agent": BROWSER_HEADERS["User-Agent"]},
+                    timeout=30,
+                )
+                if resp.status_code == 200 and len(resp.content) > 20000:
+                    html_text = resp.text
+                    via = "allorigins proxy"
+                    break
+                last_error = ValueError(
+                    f"proxy attempt {attempt + 1}: HTTP {resp.status_code}, "
+                    f"{len(resp.content)} bytes"
+                )
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+            await asyncio.sleep(2)
+
     items: list[ScheduleShow] = []
-    if resp is not None and resp.status_code == 200:
-        soup = BeautifulSoup(resp.text, "html.parser")
+    if html_text is not None:
+        soup = BeautifulSoup(html_text, "html.parser")
         ongoing = _parse_schedule_cards(soup.find("div", id="ongoingList"), "ongoingList")
         upcoming = _parse_schedule_cards(soup.find("div", id="upcomingList"), "upcomingList")
         items = ongoing + upcoming
         if not items:
             last_error = last_error or ValueError("schedule page parsed 0 shows")
         else:
-            result.note(f"{len(ongoing)} ongoing + {len(upcoming)} upcoming shows (live)")
+            result.note(f"{len(ongoing)} ongoing + {len(upcoming)} upcoming shows ({via})")
 
+    # ---- layer 3: aaj ki cached copy -------------------------------------
     if not items:
-        # site failed → fall back to today's cached copy so the day is covered
         cached = _load_schedule_cache()
         if cached:
             result.items = cached
             result.ok = True
-            result.note(f"site unreachable — using today's cached schedule ({len(cached)} shows)")
+            result.note(f"site+proxy dono unreachable — aaj ki cached schedule "
+                        f"({len(cached)} shows)")
             return result
         raise last_error or RuntimeError("schedule page unreachable")
 

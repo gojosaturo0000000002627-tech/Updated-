@@ -6,8 +6,14 @@ Never hardcode secrets here. Everything comes from environment variables
 
 Env vars:
   BOT_TOKEN      (required)  Token from @BotFather
-  CHANNEL_ID     (required)  Your channel: "@your_channel" (public) or "-100xxxxxxxxxx" (private)
+  CHANNEL_ID     (optional)  Legacy — ab zaroorat nahi! Bot ko kisi bhi channel ka
+                             ADMIN ya kisi GROUP ka MEMBER bana kar add karo,
+                             woh khud register ho jata hai (multi-channel).
   ADMIN_CHAT_ID  (optional)  Your personal chat id, so only YOU can use /sendnow and /test
+  MAX_CHANNELS   (optional)  Safety cap on connected chats (default 200)
+  DUB_TIME_OFFSET_MINUTES (optional) schedule site drops ~30 min buffer ke saath
+                             list karti hai; default -30 = real platform time.
+                             0 = site ke times jaise use karo.
   PORT           (optional)  HTTP port for the health-check server (Render sets this)
   MUSE_CHANNEL_IDS (optional) Comma-separated YouTube channel IDs to watch
                              (default: Muse India main channel)
@@ -56,6 +62,11 @@ CHANNEL_ID = os.environ.get("CHANNEL_ID", "").strip()
 # ---------------------------------------------------------------------------
 # Optional settings (with sane defaults)
 # ---------------------------------------------------------------------------
+# The schedule site lists drop times ~30 min LATER than the actual platform
+# release (safety buffer on their side). Verified against official times
+# (Crunchyroll/Muse drops): Black Torch 6:30 PM, Daemons 9:30 PM, etc.
+# Default -30 = message shows the REAL drop time. Set 0 to trust the site.
+DUB_TIME_OFFSET_MINUTES = int(os.environ.get("DUB_TIME_OFFSET_MINUTES", "-30"))
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", "").strip()
 PORT = int(os.environ.get("PORT", "10000"))
 

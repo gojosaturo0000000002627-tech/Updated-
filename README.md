@@ -194,6 +194,7 @@ python send_once.py morning
 | Channel me updates nahi aa rahe | Bot us channel ka **admin** hai? (`Post Messages` permission ON?) — nahi to admin se remove karke dobara add karo |
 | `Chat not found` / bot silent | Bot is not an **admin** of that channel — auto-remove ho gaya hoga, dobara admin banao |
 | Kitne channels jude hain? | Bot ke private chat me `/channels` likho |
+| Schedule site 403 (Render IP block) | Bot khud **allorigins proxy** se fetch karta hai, phir aaj ki cached copy — `/test` me `allorigins proxy` ya `cached schedule` dikhega |
 | No photo on the message | `assets/banner.jpg` missing — re-add it and redeploy |
 | 10 AM message late/missing | Free plan slept — set up the keep-awake pinger (§ Step 5) |
 | Muse India source ❌ in `/test` | YouTube RSS occasionally blocked from some datacenter IPs; other sources still cover it, and your `schedule_config.py` entries always go out |

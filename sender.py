@@ -158,7 +158,8 @@ async def gather_and_send(bot, evening: bool = False, force: bool = False) -> st
     now = datetime.now(IST)
     try:
         entries, report = await build_releases(now, evening=evening)
-        any_ok = any(r.ok for r in report.values())
+        backbone = report.get("dub_schedule")
+        any_ok = any(r.ok for r in report.values()) and bool(backbone and backbone.ok)
         text = (
             build_message(entries, now)
             if entries
